@@ -6,6 +6,10 @@ import WMTSTileGrid from "ol/tilegrid/WMTS"
 import { getTopLeft } from "ol/extent"
 import { getWidth } from 'ol/extent';
 import { get as getProjection, Projection, useGeographic } from 'ol/proj'
+import VectorLayer from "ol/layer/Vector"
+import VectorSource from "ol/source/Vector"
+import Style from "ol/style/Style"
+import Stroke from "ol/style/Stroke"
 
 
 const projection = getProjection("EPSG:4326") || new Projection({code: "EPSG:4326"});
@@ -280,3 +284,31 @@ export const RouteLayer = {
         }),
     })
 };
+
+export const CustomPointsLayerSource = new VectorSource({ wrapX: false });
+
+export const CustomPointsLayer = {
+    name: "Custom Points",
+    z: 20,
+    value: new VectorLayer({
+        source: CustomPointsLayerSource
+    })
+}
+
+
+export const VectorRouteSource = new VectorSource({ wrapX: false });
+
+export const VectorRouteLayer = {
+    name: "Route",
+    z: 20,
+    value: new VectorLayer({
+        source: VectorRouteSource,
+        style: new Style({
+            stroke: new Stroke({
+              color: '#82caffDD',
+              width: 8,
+            }),
+            
+          }),
+    })
+}

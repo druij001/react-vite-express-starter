@@ -1,42 +1,38 @@
 // MapComponent.js
-import { useState, useEffect, useRef } from "react"
-import { Map, MapBrowserEvent, MapEvent, View } from "ol"
+import React, { useState, useEffect, useRef } from "react"
+import { Feature, Map, MapBrowserEvent, MapEvent, View } from "ol"
 import "ol/ol.css"
 import { getInterestPoints, getRoads } from "../DBAccess/XMLParse"
-import { AdlImageLayer, AusAmenityLayer, AusLineLayer, AusPointLayer, AusPolyLayer, AusRoadLayer, countriesLayer, populatedPlacesLayer, RouteLayer } from "../MapData/WmtsLayers"
+import { AdlImageLayer, AusAmenityLayer, AusLineLayer, AusPointLayer, AusPolyLayer, AusRoadLayer, countriesLayer, CustomPointsLayer, CustomPointsLayerSource, populatedPlacesLayer, RouteLayer, VectorRouteSource, VectorRouteLayer } from "../MapData/WmtsLayers"
 import Draw, { DrawEvent } from 'ol/interaction/Draw.js';
 import VectorSource from "ol/source/Vector"
 import VectorLayer from "ol/layer/Vector"
+import { Geometry, LineString } from "ol/geom"
+import { Type } from "ol/geom/Geometry"
+import { fetchAusRoads, fetchRoute } from "../DBAccess/PgQuery"
+import { Coordinate } from "ol/coordinate"
+import { transform } from "ol/proj"
 
-const customPointsLayerSource = new VectorSource({ wrapX: false });
-
-const CustomPointsLayer = {
-    name: "Custom Points",
-    z: 20,
-    value: new VectorLayer({
-        source: customPointsLayerSource
-    })
-}
 
 export default function MapWMTS() {
 
     const map = null;
     const [mapPosition, setMapPosition] = useState([138.5998587389303, -34.925828922097786]);
-    const mapElement = useRef();
+    const mapElement = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef(map);
 
     const [zoomLevel, setZoomLevel] = useState(6);
 
-    const [layers, setLayers] = useState([AdlImageLayer, countriesLayer, RouteLayer, populatedPlacesLayer, AusPolyLayer, AusLineLayer, AusRoadLayer, AusPointLayer, AusAmenityLayer, CustomPointsLayer]);
-    const [toggledLayers, setToggledLayers] = useState<{name: string, z: number, value: any}[] | undefined>([AdlImageLayer, AusLineLayer, AusRoadLayer, AusAmenityLayer, CustomPointsLayer]);
+    const [layers, setLayers] = useState<{name: string, z: number, value: any}[]>([AdlImageLayer, countriesLayer, RouteLayer, populatedPlacesLayer, AusPolyLayer, AusLineLayer, AusRoadLayer, AusPointLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
+    const [toggledLayers, setToggledLayers] = useState<{name: string, z: number, value: any}[]>([AdlImageLayer, AusLineLayer, AusRoadLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
 
     const [selectedRoads, setSelectedRoads] = useState<{ id: string | null; name: string | null; adminLevel: string | null; boundary: string | null; source: string | null; target: string | null; }[] | undefined>(undefined);
     const [selectedAmenities, setSelectedAmenities] = useState<{id: string | null, name: string | null, covered: boolean | null}[] | undefined>(undefined);
     const [selectedRoute, setSelectedRoute] = useState({ source: 75562, target: 78946 })
-    const [selectedCoordinate, setSelectedCoordinate] = useState<{x: number | null, y: number | null}>({ x: null, y: null });
-    const [drawType, setDrawType] = useState("Polygon");
+    const [selectedCoordinate, setSelectedCoordinate] = useState<[number | null, number | null]>([null, null]);
+    const [drawType, setDrawType] = useState<Type>("Point");
 
-    const [draw, setDraw] = useState(new Draw({
+    const [draw, setDraw] = useState( new Draw({
         source: new VectorSource({ wrapX: false }),
         type: "Point",
     }))
@@ -46,7 +42,7 @@ export default function MapWMTS() {
     useEffect(() => {
 
         const map = new Map({
-            target: mapElement.current,
+            target: mapElement.current || undefined,
             layers: toggledLayers?.map(l => l.value),
             view: new View({
                 projection: "EPSG:4326",
@@ -70,15 +66,15 @@ export default function MapWMTS() {
 
         // Enable Drawing
         let drawObj = new Draw({
-            source: customPointsLayerSource,
-            type: drawType
+            source: CustomPointsLayerSource,
+            type: drawType as Type
         });
         drawObj.on("drawend", e => onDrawComplete(e));
 
         map.addInteraction(drawObj);
 
         return () => map.setTarget(undefined)
-    }, [toggledLayers, drawType, customPointsLayerSource]);
+    }, [toggledLayers, selectedRoute]);
 
     /* Change whether a layer is visible */
     function setLayerVisible(name: string, visible: boolean) {
@@ -93,7 +89,8 @@ export default function MapWMTS() {
 
         // Add a layer
         else if (visible == true && !toggledLayers?.find((e) => e.name == name)) {
-            localLayers.push(layers.find((l) => l?.name == name));
+            let newLayer = layers?.find((l) => l?.name == name);
+            newLayer && localLayers.push(newLayer);
             localLayers.sort((l1, l2) => { return l1.z - l2.z });
         }
 
@@ -103,15 +100,23 @@ export default function MapWMTS() {
 
     // Perform actions when user clicks the map
     async function onMapClick(e:  MapBrowserEvent<any>) {
+        setSelectedCoordinate([e.coordinate[0], e.coordinate[1]]);
+
+        
+        // Get details of the road which was clicked on
         const roads = await getRoads(e.coordinate, e.map.getView().getZoom() || 5);
         setSelectedRoads(roads);
-        setSelectedAmenities(await getInterestPoints(e.coordinate, e.map.getView().getZoom() || 5));
-        setSelectedCoordinate({ x: e.coordinate[0], y: e.coordinate[1] });
 
-        // if (roads[0] != null) {
-        //     setLayerVisible("Adl Route", true);
-        //     setSelectedRoute({ source: selectedRoute.source, target: roads[0].target });
-        // }
+        // Get route to point clicked on
+        if(roads && roads[0]?.target) {
+            setSelectedRoute({source: selectedRoute.source, target: parseInt(roads[0].target)});
+            drawRoute(e, selectedRoute.source, parseInt(roads[0].target));
+        }
+
+
+        // Get details of selected amenities
+        setSelectedAmenities(await getInterestPoints(e.coordinate, e.map.getView().getZoom() || 5));
+
 
     }
 
@@ -125,6 +130,25 @@ export default function MapWMTS() {
 
     function onDrawComplete(e: DrawEvent) {
         const geom = e.feature.getGeometry();
+    }
+
+    async function drawRoute(e:  MapBrowserEvent<any>, source:number, target:number) {
+        const layer = VectorRouteLayer.value;
+        const route = await fetchRoute(source,target);
+        const vertices:Coordinate[] = [];
+
+        layer.getSource()?.clear();
+
+        // Loop through the fetched path and add each node to the array
+        route?.forEach((v) => {vertices.push(transform([v.x1, v.y1], 'EPSG:3857', 'EPSG:4326'))});
+
+        var path = new LineString(vertices);
+        const pathFeature = new Feature({
+            name: "obj",
+            geometry: path,
+        })
+
+        VectorRouteSource.addFeature(pathFeature);
     }
 
     return (
@@ -146,12 +170,12 @@ export default function MapWMTS() {
                     </div>
                     <div className="leftRow middle">
                         <label style={{ marginRight: 10 }}>Last click: </label>
-                        <p>{selectedCoordinate.x || 0},{selectedCoordinate.y || 0}</p>
+                        <p>{selectedCoordinate[0] || 0},{selectedCoordinate[1] || 0}</p>
                     </div>
                 </div>
 
                 <div>
-                    <select onChange={((e) => setDrawType(e.target.value))}>
+                    <select onChange={((e) => setDrawType(e.target.value as Type))}>
                         <option value="Point">Point</option>
                         <option value="LineString">LineString</option>
                         <option value="Polygon">Polygon</option>

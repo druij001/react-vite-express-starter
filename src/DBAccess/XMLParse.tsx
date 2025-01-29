@@ -13,7 +13,7 @@ function parseDocAndGetTag(xmlText:string, tag:string) {
 }
 
 export async function getPaths(coordinate: Coordinate, zoom: number) {
-    let returnObj = [];
+    let returnObj = [{}];
 
     // Fetch and parse data
     let rawXml = await fetchPaths(coordinate, zoom);
@@ -35,7 +35,7 @@ export async function getPaths(coordinate: Coordinate, zoom: number) {
 }
 
 export async function getRoads(coordinate: Coordinate, zoom: number) {
-    let returnObj = [];
+    let returnObj:{ id: string | null; name: string | null; adminLevel: string | null; boundary: string | null; source: string | null; target: string | null; }[] = [];
 
     // Fetch and parse data
     let rawXml = await fetchRoads(coordinate, zoom);
@@ -66,7 +66,7 @@ export async function getRoads(coordinate: Coordinate, zoom: number) {
 }
 
 export async function getInterestPoints(coordinate: Coordinate, zoom: number) {
-    let returnObj = [];
+    let returnObj:{ id: string | null; name: string | null; covered: boolean | null; }[] = [];
 
     let rawXml = await fetchAmenities(coordinate, zoom);
     
