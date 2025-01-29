@@ -20,3 +20,23 @@ export async function fetchRoute(source, target):Promise<[Route] | undefined> {
     }
    
 }
+
+export async function insertSeries(name: string, description: string){
+    try {
+        return await fetch(`${rootAddress}/series/post?name=${name}&description=${description}`, {
+            method: 'POST',
+        }).then((res) => res.status);
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+export async function insertPoint(x: number, y: number, label: string, series: number){
+    try {
+        return await fetch(`${rootAddress}/point/post?x=${x}&y=${y}&label=${label}&series=${series}`, {
+            method: 'POST',
+        }).then((res) => res.status);
+    } catch (error) {
+        console.log(error);
+    }
+}

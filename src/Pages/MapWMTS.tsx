@@ -7,9 +7,9 @@ import { AdlImageLayer, AusAmenityLayer, AusLineLayer, AusPointLayer, AusPolyLay
 import Draw, { DrawEvent } from 'ol/interaction/Draw.js';
 import VectorSource from "ol/source/Vector"
 import VectorLayer from "ol/layer/Vector"
-import { Geometry, LineString } from "ol/geom"
+import { Geometry, LineString, Point } from "ol/geom"
 import { Type } from "ol/geom/Geometry"
-import { fetchAusRoads, fetchRoute } from "../DBAccess/PgQuery"
+import { fetchAusRoads, fetchRoute, insertPoint, insertSeries } from "../DBAccess/PgQuery"
 import { Coordinate } from "ol/coordinate"
 import { transform } from "ol/proj"
 
@@ -113,11 +113,8 @@ export default function MapWMTS() {
             drawRoute(e, selectedRoute.source, parseInt(roads[0].target));
         }
 
-
         // Get details of selected amenities
         setSelectedAmenities(await getInterestPoints(e.coordinate, e.map.getView().getZoom() || 5));
-
-
     }
 
 
@@ -128,26 +125,32 @@ export default function MapWMTS() {
         setMapPosition(e.map.getView().getCenter() || [138.5998587389303, -34.925828922097786]);
     }
 
-    function onDrawComplete(e: DrawEvent) {
-        const geom = e.feature.getGeometry();
+    async function onDrawComplete(e: DrawEvent) {
+        const type = e.feature.getGeometry()?.getType();
+        const feature = e.feature as Feature<Geometry>;
+
+        if(type == 'Point') {
+            let point: Point = feature.getGeometry() as Point;
+            await insertPoint(point.getCoordinates()[0], point.getCoordinates()[1], "some label", 1)
+        }
     }
 
+    // Add a route to the map
     async function drawRoute(e:  MapBrowserEvent<any>, source:number, target:number) {
         const layer = VectorRouteLayer.value;
         const route = await fetchRoute(source,target);
         const vertices:Coordinate[] = [];
 
+        // Clear any existing routes
         layer.getSource()?.clear();
 
-        // Loop through the fetched path and add each node to the array
+        // Visualise the fetched route
         route?.forEach((v) => {vertices.push(transform([v.x1, v.y1], 'EPSG:3857', 'EPSG:4326'))});
-
         var path = new LineString(vertices);
         const pathFeature = new Feature({
             name: "obj",
             geometry: path,
         })
-
         VectorRouteSource.addFeature(pathFeature);
     }
 
