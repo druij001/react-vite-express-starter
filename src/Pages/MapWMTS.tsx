@@ -2,16 +2,18 @@
 import React, { useState, useEffect, useRef } from "react"
 import { Feature, Map, MapBrowserEvent, MapEvent, View } from "ol"
 import "ol/ol.css"
-import { getInterestPoints, getRoads } from "../DBAccess/XMLParse"
+import { getInterestPoints, getRoads, handleInsertFeature } from "../DBAccess/BusinessLogic"
 import { AdlImageLayer, AusAmenityLayer, AusLineLayer, AusPointLayer, AusPolyLayer, AusRoadLayer, countriesLayer, CustomPointsLayer, CustomPointsLayerSource, populatedPlacesLayer, RouteLayer, VectorRouteSource, VectorRouteLayer } from "../MapData/WmtsLayers"
 import Draw, { DrawEvent } from 'ol/interaction/Draw.js';
 import VectorSource from "ol/source/Vector"
 import VectorLayer from "ol/layer/Vector"
 import { Geometry, LineString, Point } from "ol/geom"
 import { Type } from "ol/geom/Geometry"
-import { fetchAusRoads, fetchRoute, insertPoint, insertSeries } from "../DBAccess/PgQuery"
+import { fetchAusRoads, fetchRoute, fetchSeries } from "../DBAccess/PgQuery"
 import { Coordinate } from "ol/coordinate"
 import { transform } from "ol/proj"
+import DrawController from "../Elements/DrawController"
+import { Series } from "../assets/Types"
 
 
 export default function MapWMTS() {
@@ -23,16 +25,20 @@ export default function MapWMTS() {
 
     const [zoomLevel, setZoomLevel] = useState(6);
 
-    const [layers, setLayers] = useState<{name: string, z: number, value: any}[]>([AdlImageLayer, countriesLayer, RouteLayer, populatedPlacesLayer, AusPolyLayer, AusLineLayer, AusRoadLayer, AusPointLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
-    const [toggledLayers, setToggledLayers] = useState<{name: string, z: number, value: any}[]>([AdlImageLayer, AusLineLayer, AusRoadLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
+    const [layers, setLayers] = useState<{ name: string, z: number, value: any }[]>([AdlImageLayer, countriesLayer, RouteLayer, populatedPlacesLayer, AusPolyLayer, AusLineLayer, AusRoadLayer, AusPointLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
+    const [toggledLayers, setToggledLayers] = useState<{ name: string, z: number, value: any }[]>([AdlImageLayer, AusLineLayer, AusRoadLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
 
     const [selectedRoads, setSelectedRoads] = useState<{ id: string | null; name: string | null; adminLevel: string | null; boundary: string | null; source: string | null; target: string | null; }[] | undefined>(undefined);
-    const [selectedAmenities, setSelectedAmenities] = useState<{id: string | null, name: string | null, covered: boolean | null}[] | undefined>(undefined);
-    const [selectedRoute, setSelectedRoute] = useState({ source: 75562, target: 78946 })
+    const [selectedAmenities, setSelectedAmenities] = useState<{ id: string | null, name: string | null, covered: boolean | null }[] | undefined>(undefined);
+    const [selectedRoute, setSelectedRoute] = useState({ source: 75299, target: 78946 })
     const [selectedCoordinate, setSelectedCoordinate] = useState<[number | null, number | null]>([null, null]);
-    const [drawType, setDrawType] = useState<Type>("Point");
 
-    const [draw, setDraw] = useState( new Draw({
+    // Drawing controls
+    const [isDrawing, setIsDrawing] = useState<boolean>(false);
+    const [drawType, setDrawType] = useState<Type | "None">("None");
+    const [series, setSeries] = useState<Series[] | undefined>(undefined);
+
+    const [draw, setDraw] = useState(new Draw({
         source: new VectorSource({ wrapX: false }),
         type: "Point",
     }))
@@ -40,7 +46,7 @@ export default function MapWMTS() {
     mapRef.current = map;
 
     useEffect(() => {
-
+        getData();
         const map = new Map({
             target: mapElement.current || undefined,
             layers: toggledLayers?.map(l => l.value),
@@ -64,17 +70,32 @@ export default function MapWMTS() {
         map.on("moveend", (e) => onMapMoveEnd(e))
         map.on('click', (e) => onMapClick(e))
 
-        // Enable Drawing
-        let drawObj = new Draw({
-            source: CustomPointsLayerSource,
-            type: drawType as Type
-        });
-        drawObj.on("drawend", e => onDrawComplete(e));
 
-        map.addInteraction(drawObj);
+        // Enable Drawing
+        if (drawType != "None") {
+            console.log(drawType)
+            let drawObj = new Draw({
+                source: CustomPointsLayerSource,
+                type: drawType as Type
+            });
+            drawObj.on("drawstart", e => onDrawBegin(e))
+            drawObj.on("drawend", e => onDrawComplete(e));
+            map.addInteraction(drawObj);
+        }
 
         return () => map.setTarget(undefined)
-    }, [toggledLayers, selectedRoute]);
+    }, [toggledLayers, selectedRoute, drawType]);
+
+    // Fetch data on page load
+    async function getData() {
+        
+        try {
+            setSeries(await fetchSeries());
+            console.log(series);
+        } catch (error) {
+            console.warn("Error fetching series");
+        }
+    }
 
     /* Change whether a layer is visible */
     function setLayerVisible(name: string, visible: boolean) {
@@ -99,16 +120,16 @@ export default function MapWMTS() {
 
 
     // Perform actions when user clicks the map
-    async function onMapClick(e:  MapBrowserEvent<any>) {
+    async function onMapClick(e: MapBrowserEvent<any>) {
         setSelectedCoordinate([e.coordinate[0], e.coordinate[1]]);
 
-        
+
         // Get details of the road which was clicked on
         const roads = await getRoads(e.coordinate, e.map.getView().getZoom() || 5);
         setSelectedRoads(roads);
 
         // Get route to point clicked on
-        if(roads && roads[0]?.target) {
+        if(drawType == "None" && roads && roads[0]?.target) {
             setSelectedRoute({source: selectedRoute.source, target: parseInt(roads[0].target)});
             drawRoute(e, selectedRoute.source, parseInt(roads[0].target));
         }
@@ -125,27 +146,27 @@ export default function MapWMTS() {
         setMapPosition(e.map.getView().getCenter() || [138.5998587389303, -34.925828922097786]);
     }
 
+    // Perform an action when a drawing is completed
     async function onDrawComplete(e: DrawEvent) {
-        const type = e.feature.getGeometry()?.getType();
-        const feature = e.feature as Feature<Geometry>;
+        let res = await handleInsertFeature("test11", 2, e.feature.getGeometry()?.getType(), e.feature as Feature<Geometry>)
+        setIsDrawing(false);
+    }
 
-        if(type == 'Point') {
-            let point: Point = feature.getGeometry() as Point;
-            await insertPoint(point.getCoordinates()[0], point.getCoordinates()[1], "some label", 1)
-        }
+    function onDrawBegin(e: DrawEvent) {
+        setIsDrawing(true);
     }
 
     // Add a route to the map
-    async function drawRoute(e:  MapBrowserEvent<any>, source:number, target:number) {
+    async function drawRoute(e: MapBrowserEvent<any>, source: number, target: number) {
         const layer = VectorRouteLayer.value;
-        const route = await fetchRoute(source,target);
-        const vertices:Coordinate[] = [];
+        const route = await fetchRoute(source, target);
+        const vertices: Coordinate[] = [];
 
         // Clear any existing routes
         layer.getSource()?.clear();
 
         // Visualise the fetched route
-        route?.forEach((v) => {vertices.push(transform([v.x1, v.y1], 'EPSG:3857', 'EPSG:4326'))});
+        route?.forEach((v) => { vertices.push(transform([v.x1, v.y1], 'EPSG:3857', 'EPSG:4326')) });
         var path = new LineString(vertices);
         const pathFeature = new Feature({
             name: "obj",
@@ -177,15 +198,12 @@ export default function MapWMTS() {
                     </div>
                 </div>
 
-                <div>
-                    <select onChange={((e) => setDrawType(e.target.value as Type))}>
-                        <option value="Point">Point</option>
-                        <option value="LineString">LineString</option>
-                        <option value="Polygon">Polygon</option>
-                        <option value="Circle">Circle</option>
-                        <option value="None">None</option>
-                    </select>
-                </div>
+                <DrawController 
+                    drawType={drawType} 
+                    setDrawType={setDrawType} 
+                    series={series}
+                    setSeries={setSeries}
+                    isDrawing={isDrawing}/>
 
                 <div style={{ height: "70vh" }}>
                     <div

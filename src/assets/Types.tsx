@@ -1,3 +1,6 @@
+import { typeName } from "ol/expr/expression"
+import { types } from "pg"
+
 export interface Route {
     osm_id: number,
     seq: number, 
@@ -11,3 +14,9 @@ export interface Route {
     y2: number,
     way: string
 }
+
+export type Series = {
+    id: number, 
+    label: string, 
+    description: string
+};

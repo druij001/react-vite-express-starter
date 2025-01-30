@@ -53,32 +53,27 @@ async function setupApp() {
     }
 
         //Create a new point
-        try {
-            app.post("/api/point/post",(req, res) => {
+            app.post("/api/feature/post",(req, res) => {
     
                 const options = {
-                    x: req.query.x || null,
-                    y: req.query.y || null,
                     label: req.query.label,
+                    geom: req.query.geom,
                     series_id: req.query.series
                 };
     
                 // Needs validation
-                if(options.x == null || !options.y == null) {
-                    res.sendStatus(400);
+                if(!options.geom) {
+                    res.sendStatus(410);
                     return;
                 }
         
                 pgClient.query(
-                    "INSERT INTO POINTS (x, y, label, series_id) \
-                    VALUES ($1, $2, $3, $4)", [options.x, options.y, options.label, options.series_id])  
+                    "INSERT INTO user_features (label, geom, series_id) \
+                    VALUES ($1, $2, $3)", [options.label, options.geom, options.series_id])  
                     .then((r) => {
-                        res.send(options);
-                    })
+                        res.sendStatus(200);
+                    }).catch(e => res.sendStatus(400))
             })
-        } catch (error) {
-            console.log(error);
-        }
     
     try {
     // Fetch roads
@@ -114,7 +109,6 @@ async function setupApp() {
             };
 
             // Needs validation
-    
             pgClient.query(
                 "SELECT * FROM get_route($1, $2)", [options.source as number, options.target as number])
                 .then((r) => {
@@ -125,12 +119,23 @@ async function setupApp() {
         console.log(error);
     }
 
+    // Fetch all series
+        app.get("/api/series/fetch",(req, res) => {
 
+            const options = {
+                id: req.query.id,
+            };
+
+            let query = "SELECT * FROM series";
+            if(options.id) query = query.concat(" WHERE id = $1")
+
+            console.log(query);
+
+            pgClient.query(
+                query, [])
+                .then((r) => res.send(r.rows))
+                .catch(e => res.sendStatus(400));
+        })
 }
-
-// app.get("/roads", (req, res) => res.send(`api Server - path: "${req.path} "`))
-// app.get("/route", (req, res) => res.send(`api Server - path: "${req.path} "`))
-// app.get("/series/post", (req, res) => res.send(`api Server - path: "${req.path} "`))
-// app.get("/point/post", (req, res) => res.send(`api Server - path: "${req.path} "`))
 
 app.listen(3002, (() => console.log("Listening")))

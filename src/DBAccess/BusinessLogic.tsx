@@ -1,16 +1,11 @@
 import { Coordinate } from "ol/coordinate";
 import { fetchAmenities, fetchPaths, fetchRoads } from "./GeoserverQuery";
+import { Geometry, GeometryCollection, LineString, Point, Polygon } from "ol/geom";
+import { Type } from "ol/geom/Geometry";
+import { Feature } from "ol";
+import { insertFeature } from "./PgQuery";
 
 const DOM_PARSER = new DOMParser();
-
-function parseDocAndGetTag(xmlText:string, tag:string) {
-    try {
-        return DOM_PARSER.parseFromString(xmlText, "text/xml").getElementsByTagName(tag);
-    } catch (error) {
-        console.log(error);
-        return null;
-    }
-}
 
 export async function getPaths(coordinate: Coordinate, zoom: number) {
     let returnObj = [{}];
@@ -82,4 +77,39 @@ export async function getInterestPoints(coordinate: Coordinate, zoom: number) {
     }
 
     return returnObj;
+}
+
+export async function handleInsertFeature(label: string, series: number, type: Type | undefined, feature: Feature<Geometry>) {
+    if(!type) {
+        return false;
+    }
+
+    // Convert feature into geometry format
+    const geom = feature.getGeometry() as Point | Polygon | LineString;
+
+    let geomString = "";
+
+    if(type != "Point") {
+        geom.getCoordinates().forEach((coord, i) => {
+            geomString = geomString.concat(`${coord[0]} ${coord[1]}`);
+            if(i != geom.getCoordinates().length) geomString = geomString.concat(", ");
+        });
+    } 
+        geomString = geomString.concat(`${geom.getCoordinates()[0]} ${geom.getCoordinates()[1]}`)
+
+        try {
+            return await insertFeature(label, `${type}(${geomString})`, series);
+        } catch (error) {
+            console.warn(`error inserting ${label}, ${series}, ${type}`)
+        }
+}
+
+// Helper function
+function parseDocAndGetTag(xmlText:string, tag:string) {
+    try {
+        return DOM_PARSER.parseFromString(xmlText, "text/xml").getElementsByTagName(tag);
+    } catch (error) {
+        console.log(error);
+        return null;
+    }
 }

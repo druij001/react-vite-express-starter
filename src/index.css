@@ -23,9 +23,7 @@ a:hover {
 }
 
 body {
-  margin: 0;
   display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -55,6 +53,19 @@ button:focus-visible {
 }
 
 /* extendable attrs*/
+.m2 {
+  margin: 10;
+}
+
+.mv2 {
+  margin-top: 10;
+  margin-bottom: 10;
+}
+
+.pv2 {
+  padding-top: 10;
+  padding-bottom: 10;
+}
 
 .middle {
   align-items: center;
@@ -70,6 +81,11 @@ button:focus-visible {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+}
+
+.Column {
+  display: flex;
+  flex-direction: column;
 }
 
 
