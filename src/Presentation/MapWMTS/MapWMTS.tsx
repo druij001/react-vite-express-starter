@@ -10,8 +10,8 @@ import { Type } from "ol/geom/Geometry"
 import { fetchRoute, fetchSeries } from "../../persistence/PgQuery"
 import { Coordinate } from "ol/coordinate"
 import { transform } from "ol/proj"
+import DrawController from "./DrawController"
 import { Series } from "../../assets/TypeDeclarations/Types"
-import DrawController from "../../Presentation/MapWMTS/DrawController"
 
 
 export default function MapWMTS() {

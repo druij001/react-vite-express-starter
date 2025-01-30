@@ -1,18 +1,17 @@
-import { response } from "express";
-import { Feature, Route, Series, ServerResponse } from "../assets/Types";
+import { Route } from "../assets/TypeDeclarations/Interfaces";
+import { Feature, Series, ServerResponse } from "../assets/TypeDeclarations/Types";
 
 const rootAddress = "http://localhost:3002/api"
 
 /* ----- FETCH FUNCTIONS ----- */
-export async function fetchAusRoads(limit) {
-    let res = await fetch(`${rootAddress}/roads?limit=${limit}`, {
+export async function fetchAusRoads(limit:number) {
+    return await fetch(`${rootAddress}/roads?limit=${limit}`, {
         method: 'GET',
     });
 }
 
 
-
-export async function fetchRoute(source, target):Promise<[Route] | undefined> {
+export async function fetchRoute(source: number, target:number):Promise<[Route] | undefined> {
     try {
         return await fetch(`${rootAddress}/route?source=${source}&target=${target}`, {
             method: 'GET',
@@ -33,7 +32,7 @@ export async function fetchSeries(): Promise<Series[] | undefined>{
         if(sr.response == 200) return sr.data;
         else throw Error(sr.response.toString())
     }))
-    .catch(e => {throw Error("Unknown Error")});
+    .catch(() => {throw Error("Unknown Error")});
 }
 
 export async function fetchSeriesFeatures(id: number): Promise<Feature[] | undefined>{
@@ -46,7 +45,7 @@ export async function fetchSeriesFeatures(id: number): Promise<Feature[] | undef
         if(sr.response == 200) return sr.data;
         else throw Error(sr.response.toString())
     }))
-    .catch(e => {throw Error("Unknown Error")});
+    .catch(() => {throw Error("Unknown Error")});
 }
 
 

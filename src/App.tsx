@@ -1,5 +1,5 @@
 import './App.css'
-import MapWMTS from './Pages/MapWMTS/MapWMTS'
+import MapWMTS from './Presentation/MapWMTS/MapWMTS'
 
 function App() {
 

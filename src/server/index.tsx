@@ -3,13 +3,18 @@ import { api } from "./api.js";
 import pg from "pg"
 import cors from "cors"
 
-function ServerResponse(response, data) {
-    this.response = response;
-    this.data = data;
+class ServerResponse {
+    response: number;
+    data: any;
+
+    constructor(response: number, data: any) {
+        this.response = response;
+        this.data = data;
+    }
 }
 
+
 const app = express();
-const router = express.Router();
 const corsOptions = {
     origin: '*',
     optionsSuccessStatus: 200,
@@ -48,8 +53,8 @@ async function setupApp() {
         pgClient.query(
             "INSERT INTO SERIES (name, description) \
                 VALUES ($1, $2)", [options.name, options.description])
-            .then((r) => res.send(options))
-            .catch(e => { return Error() })
+            .then(() => res.send(options))
+            .catch(() => { return Error() })
     });
 
     //Create a new point
@@ -72,7 +77,7 @@ async function setupApp() {
             "INSERT INTO user_features (label, type, geom, series_id) \
             VALUES ($1, $2, $3, $4)", [options.label, options.type, options.geom, options.series_id])
             .then((r) => res.send(new ServerResponse(200, r.rows)))
-            .catch(e => res.send(new ServerResponse(404, undefined)));
+            .catch(() => res.send(new ServerResponse(404, undefined)));
     })
 
     // Fetch roads
@@ -88,7 +93,7 @@ async function setupApp() {
             "select * from planet_osm_roads \
             limit $1", [options.limit])
             .then((r) => res.send(r.rows))
-            .catch((e) => res.sendStatus(404))
+            .catch(() => res.sendStatus(404))
     })
 
     // Fetch a route
@@ -103,7 +108,7 @@ async function setupApp() {
         pgClient.query(
             "SELECT * FROM get_route($1, $2)", [options.source as number, options.target as number])
             .then((r) => res.send(r.rows))
-            .catch(e => res.sendStatus(404))
+            .catch(() => res.sendStatus(404))
     })
 
     // Fetch all series
@@ -114,7 +119,7 @@ async function setupApp() {
         pgClient.query(
             query)
             .then((r) => res.send(new ServerResponse(200, r.rows)))
-            .catch(e => res.send(new ServerResponse(404, undefined)));
+            .catch(() => res.send(new ServerResponse(404, undefined)));
     })
 
     // Fetch a single series
@@ -137,7 +142,7 @@ async function setupApp() {
         pgClient.query(
             query, [options.id])
             .then((r) => res.send(new ServerResponse(200, r.rows)))
-            .catch(e => res.send(new ServerResponse(404, undefined)));
+            .catch(() => res.send(new ServerResponse(404, undefined)));
     })
 }
 

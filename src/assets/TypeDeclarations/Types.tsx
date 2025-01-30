@@ -1,24 +1,18 @@
 import { Coordinate } from "ol/coordinate";
-import { typeName } from "ol/expr/expression"
-import { types } from "pg"
 
-export interface Route {
-    osm_id: number,
-    seq: number, 
-    path_seq: number,
-    start_vid: number,
-    end_vid: number,
-    cost: number,
-    x1: number, 
-    y1: number,
-    x2: number,
-    y2: number,
-    way: string
+export type DrawControllerElement = {
+    drawType: "Point" | "LineString" | "Polygon" | "Circle" | "None",
+    setDrawType: any,
+    series: Series[] | undefined,
+    setSeries: any,
+    isDrawing: boolean,
+    selectedSeries: number | undefined,
+    setSelectedSeries: any,
 }
 
 export type Series = {
     id: number, 
-    label: string, 
+    name: string, 
     description: string
 };
 

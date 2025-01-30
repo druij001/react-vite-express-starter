@@ -1,10 +1,10 @@
 import { Coordinate } from "ol/coordinate";
-import { fetchAmenities, fetchPaths, fetchRoads } from "./GeoserverQuery";
-import { Geometry, GeometryCollection, LineString, Point, Polygon } from "ol/geom";
+import { fetchAmenities, fetchPaths, fetchRoads } from "../persistence/GeoserverQuery";
+import { Geometry, LineString, Point, Polygon } from "ol/geom";
 import { Type } from "ol/geom/Geometry";
 import { Feature } from "ol";
-import { fetchSeriesFeatures, insertFeature } from "./PgQuery";
-import { HandledFeature } from "../assets/Types";
+import { fetchSeriesFeatures, insertFeature } from "../persistence/PgQuery";
+import { HandledFeature } from "../assets/TypeDeclarations/Types";
 
 const DOM_PARSER = new DOMParser();
 
@@ -104,7 +104,7 @@ export async function handleInsertFeature(label: string, series: number, type: T
     await insertFeature(label, type, geomArray, series);
 }
 
-export async function handleFetchSeriesFeatures(id) {
+export async function handleFetchSeriesFeatures(id:any) {
     const features = await fetchSeriesFeatures(id);
     const handledFeatures = new Array<HandledFeature>();
 
