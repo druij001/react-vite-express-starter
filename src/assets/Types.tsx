@@ -1,3 +1,4 @@
+import { Coordinate } from "ol/coordinate";
 import { typeName } from "ol/expr/expression"
 import { types } from "pg"
 
@@ -20,3 +21,24 @@ export type Series = {
     label: string, 
     description: string
 };
+
+export type ServerResponse = {
+    response: number,
+    data: any[] | undefined
+}
+
+export type Feature = {
+    id: number, 
+    label: string | null,
+    type: string,
+    geom: string,
+    series_id: number
+}
+
+export type HandledFeature = {
+    id: number, 
+    label: string | null,
+    type: string,
+    geom: Coordinate[],
+    series_id: number
+}

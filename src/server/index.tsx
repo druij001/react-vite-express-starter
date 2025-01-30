@@ -3,12 +3,17 @@ import { api } from "./api.js";
 import pg from "pg"
 import cors from "cors"
 
+function ServerResponse(response, data) {
+    this.response = response;
+    this.data = data;
+}
+
 const app = express();
 const router = express.Router();
 const corsOptions = {
     origin: '*',
     optionsSuccessStatus: 200,
-  };
+};
 app.use(api);
 app.use(cors(corsOptions));
 setupApp()
@@ -27,57 +32,51 @@ async function setupApp() {
 
 
     //Create a new series
-    try {
-        app.post("/api/series/post",(req, res) => {
+    app.post("/api/series/post", (req, res) => {
 
-            const options = {
-                name: req.query.name || null,
-                description: req.query.description || null
-            };
+        const options = {
+            name: req.query.name || null,
+            description: req.query.description || null
+        };
 
-            // Needs validation
-            if(!options.description && !options.name) {
-                res.send(options);
-                return;
-            }
-    
-            pgClient.query(
-                "INSERT INTO SERIES (name, description) \
-                VALUES ($1, $2)", [options.name, options.description])  
-                .then((r) => {
-                    res.send(options);
-                })
-        })
-    } catch (error) {
-        console.log(error);
-    }
+        // Needs validation
+        if (!options.description && !options.name) {
+            res.send(options);
+            return;
+        }
 
-        //Create a new point
-            app.post("/api/feature/post",(req, res) => {
-    
-                const options = {
-                    label: req.query.label,
-                    geom: req.query.geom,
-                    series_id: req.query.series
-                };
-    
-                // Needs validation
-                if(!options.geom) {
-                    res.sendStatus(410);
-                    return;
-                }
-        
-                pgClient.query(
-                    "INSERT INTO user_features (label, geom, series_id) \
-                    VALUES ($1, $2, $3)", [options.label, options.geom, options.series_id])  
-                    .then((r) => {
-                        res.sendStatus(200);
-                    }).catch(e => res.sendStatus(400))
-            })
-    
-    try {
+        pgClient.query(
+            "INSERT INTO SERIES (name, description) \
+                VALUES ($1, $2)", [options.name, options.description])
+            .then((r) => res.send(options))
+            .catch(e => { return Error() })
+    });
+
+    //Create a new point
+    app.post("/api/feature/post", (req, res) => {
+
+        const options = {
+            label: req.query.label || null,
+            type: req.query.type,
+            geom: req.query.geom,
+            series_id: req.query.series
+        };
+
+        // Needs validation
+        if (!options.geom || !options.series_id || !options.type) {
+            res.send(new ServerResponse(403, undefined));
+            return;
+        }
+
+        pgClient.query(
+            "INSERT INTO user_features (label, type, geom, series_id) \
+            VALUES ($1, $2, $3, $4)", [options.label, options.type, options.geom, options.series_id])
+            .then((r) => res.send(new ServerResponse(200, r.rows)))
+            .catch(e => res.send(new ServerResponse(404, undefined)));
+    })
+
     // Fetch roads
-    app.get("/api/roads",(req, res) => {
+    app.get("/api/roads", (req, res) => {
 
         const options = {
             limit: req.query.limit || 10
@@ -88,54 +87,58 @@ async function setupApp() {
         pgClient.query(
             "select * from planet_osm_roads \
             limit $1", [options.limit])
-            .then((r) => {
-                res.send(r.rows)
-            }).catch((err) => {
-                res.send(err)
-            })
+            .then((r) => res.send(r.rows))
+            .catch((e) => res.sendStatus(404))
     })
-    }
-    catch(error) {
-        console.log(error);
-    }    
-    
+
     // Fetch a route
-    try {
-        app.get("/api/route",(req, res) => {
+    app.get("/api/route", (req, res) => {
 
-            const options = {
-                source: req.query.source || 0,
-                target: req.query.target || 0
-            };
+        const options = {
+            source: req.query.source || 0,
+            target: req.query.target || 0
+        };
 
-            // Needs validation
-            pgClient.query(
-                "SELECT * FROM get_route($1, $2)", [options.source as number, options.target as number])
-                .then((r) => {
-                    res.send(r.rows)
-                })
-        })
-    } catch (error) {
-        console.log(error);
-    }
+        // Needs validation
+        pgClient.query(
+            "SELECT * FROM get_route($1, $2)", [options.source as number, options.target as number])
+            .then((r) => res.send(r.rows))
+            .catch(e => res.sendStatus(404))
+    })
 
     // Fetch all series
-        app.get("/api/series/fetch",(req, res) => {
+    app.get("/api/series/fetch", (req, res) => {
 
-            const options = {
-                id: req.query.id,
-            };
+        let query = "SELECT * FROM series ORDER BY id";
 
-            let query = "SELECT * FROM series";
-            if(options.id) query = query.concat(" WHERE id = $1")
+        pgClient.query(
+            query)
+            .then((r) => res.send(new ServerResponse(200, r.rows)))
+            .catch(e => res.send(new ServerResponse(404, undefined)));
+    })
 
-            console.log(query);
+    // Fetch a single series
+    app.get("/api/series/fetchSingle", (req, res) => {
 
-            pgClient.query(
-                query, [])
-                .then((r) => res.send(r.rows))
-                .catch(e => res.sendStatus(400));
-        })
+        const options = {
+            id: req.query.id,
+        };
+
+        if (!options.id) {
+            res.sendStatus(400);
+            return;
+        }
+
+        let query = "\
+            select f.id, f.label, f.series_id, f.type, f.geom from user_features as f \
+            join series as s on s.id = f.series_id \
+            where s.id = $1"
+
+        pgClient.query(
+            query, [options.id])
+            .then((r) => res.send(new ServerResponse(200, r.rows)))
+            .catch(e => res.send(new ServerResponse(404, undefined)));
+    })
 }
 
 app.listen(3002, (() => console.log("Listening")))
