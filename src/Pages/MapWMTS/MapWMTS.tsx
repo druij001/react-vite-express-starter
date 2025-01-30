@@ -1,20 +1,17 @@
 // MapComponent.js
-import React, { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Feature, Map, MapBrowserEvent, MapEvent, View } from "ol"
 import "ol/ol.css"
-import { getInterestPoints, getRoads, handleFetchSeriesFeatures, handleInsertFeature } from "../DBAccess/BusinessLogic"
-import { AdlImageLayer, AusAmenityLayer, AusLineLayer, AusPointLayer, AusPolyLayer, AusRoadLayer, countriesLayer, CustomPointsLayer, CustomPointsLayerSource, populatedPlacesLayer, RouteLayer, VectorRouteSource, VectorRouteLayer } from "../MapData/WmtsLayers"
+import { getInterestPoints, getRoads, handleFetchSeriesFeatures, handleInsertFeature } from "../../DBAccess/BusinessLogic"
+import { AdlImageLayer, AusAmenityLayer, AusLineLayer, AusPointLayer, AusPolyLayer, AusRoadLayer, countriesLayer, CustomPointsLayer, CustomPointsLayerSource, populatedPlacesLayer, RouteLayer, VectorRouteSource, VectorRouteLayer } from "../../MapData/WmtsLayers"
 import Draw, { DrawEvent } from 'ol/interaction/Draw.js';
-import VectorSource from "ol/source/Vector"
-import VectorLayer from "ol/layer/Vector"
-import { Geometry, GeometryCollection, LineString, Point, Polygon } from "ol/geom"
+import { Geometry, LineString, Point, Polygon } from "ol/geom"
 import { Type } from "ol/geom/Geometry"
-import { fetchAusRoads, fetchRoute, fetchSeries, fetchSeriesFeatures } from "../DBAccess/PgQuery"
+import { fetchRoute, fetchSeries } from "../../DBAccess/PgQuery"
 import { Coordinate } from "ol/coordinate"
 import { transform } from "ol/proj"
-import DrawController from "../Elements/DrawController"
-import { Series } from "../assets/Types"
-
+import DrawController from "./DrawController"
+import { Series } from "../../assets/Types"
 
 export default function MapWMTS() {
 
@@ -27,7 +24,7 @@ export default function MapWMTS() {
 
     const [zoomLevel, setZoomLevel] = useState(6);
 
-    const [layers, setLayers] = useState<{ name: string, z: number, value: any }[]>([AdlImageLayer, countriesLayer, RouteLayer, populatedPlacesLayer, AusPolyLayer, AusLineLayer, AusRoadLayer, AusPointLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
+    const layers:{ name: string, z: number, value: any }[] = [AdlImageLayer, countriesLayer, RouteLayer, populatedPlacesLayer, AusPolyLayer, AusLineLayer, AusRoadLayer, AusPointLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer];
     const [toggledLayers, setToggledLayers] = useState<{ name: string, z: number, value: any }[]>([AdlImageLayer, AusLineLayer, AusRoadLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
 
     const [selectedRoads, setSelectedRoads] = useState<{ id: string | null; name: string | null; adminLevel: string | null; boundary: string | null; source: string | null; target: string | null; }[] | undefined>(undefined);
@@ -40,12 +37,6 @@ export default function MapWMTS() {
     const [drawType, setDrawType] = useState<Type | "None">("None");
     const [series, setSeries] = useState<Series[] | undefined>(undefined);
     const [selectedSeriesId, setSelectedSeriesId] = useState<number | undefined>(undefined);
-    const [seriesFeatures, setSeriesFeatures] = useState<Feature[] | undefined>(undefined)
-
-    const [draw, setDraw] = useState(new Draw({
-        source: new VectorSource({ wrapX: false }),
-        type: "Point",
-    }))
 
     mapRef.current = map;
 
@@ -96,7 +87,7 @@ export default function MapWMTS() {
 
         try {
             setSeries(await fetchSeries());
-        } catch (error) {
+        } catch (error:any) {
             console.warn(error.message, "Fetching series");
         }
     }
@@ -188,17 +179,16 @@ export default function MapWMTS() {
         VectorRouteSource.addFeature(pathFeature);
     }
 
-    async function onSeriesChange(id) {
+    async function onSeriesChange(id:number) {
         const drawLayer = CustomPointsLayer.value;
-
-        setSelectedSeriesId(id || undefined);
-        if (!id) {
-            console.warn("Could not fetch series. No series ID given");
-            return;
-        }
 
         // Clear current features
         drawLayer.getSource()?.clear();
+
+        setSelectedSeriesId(id || undefined);
+        if (!id) {
+            return;
+        }
 
         // Display new features on screen
         try {
@@ -217,7 +207,7 @@ export default function MapWMTS() {
                 })
 
             }
-        } catch (error) {
+        } catch (error:any) {
             console.warn(error.message, "Fetching features")
         }
     }
@@ -273,7 +263,7 @@ export default function MapWMTS() {
                 </div>
                 <div >
                     <h3>Amenities</h3>
-                    {selectedAmenities?.map((a, i) => (
+                    {selectedAmenities?.map((a) => (
                         <div key={a.id} style={{ width: "100%" }}>
                             <p>{a.name} ({a.covered == false && "un"}covered)</p>
                         </div>

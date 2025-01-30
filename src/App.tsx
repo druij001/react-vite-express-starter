@@ -1,6 +1,5 @@
-import React from 'react'
 import './App.css'
-import MapWMTS from './Pages/MapWMTS'
+import MapWMTS from './Pages/MapWMTS/MapWMTS'
 
 function App() {
 
