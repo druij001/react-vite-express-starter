@@ -125,6 +125,7 @@ export async function handleFetchSeriesFeatures(id:any) {
 
     return handledFeatures;
 }
+
 // Helper function
 function parseDocAndGetTag(xmlText: string, tag: string) {
     try {

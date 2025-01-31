@@ -7,11 +7,12 @@ import { AdlImageLayer, AusAmenityLayer, AusLineLayer, AusPointLayer, AusPolyLay
 import Draw, { DrawEvent } from 'ol/interaction/Draw.js';
 import { Geometry, LineString, Point, Polygon } from "ol/geom"
 import { Type } from "ol/geom/Geometry"
-import { fetchRoute, fetchSeries } from "../../persistence/PgQuery"
+import { fetchRoute, fetchSeries, insertSeries } from "../../persistence/PgQuery"
 import { Coordinate } from "ol/coordinate"
 import { transform } from "ol/proj"
 import DrawController from "./DrawController"
 import { Series } from "../../assets/TypeDeclarations/Types"
+import CreateSeriesDialogue from "./CreateSeriesDialogue"
 
 
 export default function MapWMTS() {
@@ -38,6 +39,9 @@ export default function MapWMTS() {
     const [drawType, setDrawType] = useState<"Polygon" | "LineString" | "Point" | "Circle" | "None">("None");
     const [series, setSeries] = useState<Series[] | undefined>(undefined);
     const [selectedSeriesId, setSelectedSeriesId] = useState<number | undefined>(undefined);
+
+    //Dialogues
+    const [createSeriesActive, setCreateSeriesActive] = useState<boolean>(false);
 
     mapRef.current = map;
 
@@ -181,6 +185,7 @@ export default function MapWMTS() {
     }
 
     async function onSeriesChange(id:number) {
+        if(id==-1) {return;}
         const drawLayer = CustomPointsLayer.value;
 
         // Clear current features
@@ -271,6 +276,9 @@ export default function MapWMTS() {
                     ))}
                 </div>
             </div>
+            <CreateSeriesDialogue
+                active={false} 
+                setActive={setCreateSeriesActive} />
         </div>
     )
 }
