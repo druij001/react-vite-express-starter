@@ -36,7 +36,7 @@ export type HandledFeature = {
     geom: Coordinate[],
     series_id: number
 }
-
+/** The object returned from querying roads table through geoserver */
 export type GeoserverFeatureCollection = {
     crs: Object,
     features: GeoserverRoadFeature[],
@@ -46,7 +46,7 @@ export type GeoserverFeatureCollection = {
     totalFeatures: number
     type: string
 }
-
+/** The feature type returned from querying roads table through geoserver */
 export type GeoserverRoadFeature = {
     type: string,
     id: string,
@@ -56,7 +56,7 @@ export type GeoserverRoadFeature = {
 }
 
 
-// The property type attached to a geoserver JSON getFeatureQuery
+/** The properties of the roads feature returned from querying roads table through geoserver */
 export type GeoserverRoadProperty = {
     access: any
     "addr:housename": any
@@ -113,12 +113,6 @@ export type GeoserverRoadProperty = {
     shop: any
     sport: any
     surface: any
-    toll: any
-    tourism: any
-    tracktype: any
-    tunnel: any
-    water: any
-    waterway: any
     way_area: any
     wetland: any
     width: any

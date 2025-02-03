@@ -8,7 +8,9 @@ import { GeoserverFeatureCollection, GeoserverRoadFeature, HandledFeature } from
 
 const DOM_PARSER = new DOMParser();
 
-// Helper function to extract a section from an xml field
+/**
+ * Helper function to extract a section from an xml field
+ */
 function parseDocAndGetTag(xmlText: string, tag: string) {
     try {
         return DOM_PARSER.parseFromString(xmlText, "text/xml").getElementsByTagName(tag);
@@ -20,7 +22,9 @@ function parseDocAndGetTag(xmlText: string, tag: string) {
 
 /**  
     EXAMPLE of how to extract roads information out of an json object 
- */
+*  @param coordinate The coordinate clicked on
+*  @param zoom The current map zoom level (used to calculate the bounding box size)
+*/
 export async function getRoads(coordinate: Coordinate, zoom: number) {
     const returnObj: { id: number | null; name: string | null; adminLevel: string | null; boundary: string | null; source: number | null; target: number | null; z: string | null }[] = [];
 
@@ -37,23 +41,25 @@ export async function getRoads(coordinate: Coordinate, zoom: number) {
 
         // Select only properties that are a type of highway
         if (properties.highway)
-        returnObj.push(
-            {
-                id: properties.osm_id || null,
-                name: properties.name || null,
-                adminLevel: properties.admin_level || null,
-                boundary: properties.boundary || null,
-                source: properties.source || null,
-                target: properties.target || null,
-                z: properties.z_order || null
-            })
+            returnObj.push(
+                {
+                    id: properties.osm_id || null,
+                    name: properties.name || null,
+                    adminLevel: properties.admin_level || null,
+                    boundary: properties.boundary || null,
+                    source: properties.source || null,
+                    target: properties.target || null,
+                    z: properties.z_order || null
+                })
     }
 
     return returnObj;
 }
 
-/*  
-//    EXAMPLE of how to extract points information out of an xml object 
+/**  
+ * EXAMPLE of how to extract points information out of an xml object 
+*  @param coordinate The coordinate clicked on
+*  @param zoom The current map zoom level (used to calculate the bounding box size)
 */
 export async function getInterestPoints(coordinate: Coordinate, zoom: number) {
     const returnObj: { id: string | null; name: string | null; covered: boolean | null; }[] = [];
@@ -80,8 +86,10 @@ export async function getInterestPoints(coordinate: Coordinate, zoom: number) {
     return returnObj;
 }
 
-/* 
-// EXAMPLE of how to prepare an open layers point, polygon or linestring for insertion into the postgres DB
+/**
+* EXAMPLE of how to prepare an open layers point, polygon or linestring for insertion into the postgres DB
+*  @param coordinate The coordinate clicked on
+*  @param zoom The current map zoom level (used to calculate the bounding box size)
 */
 export async function handleInsertFeature(label: string, series: number, type: Type, feature: Feature<Geometry>) {
 
@@ -107,8 +115,9 @@ export async function handleInsertFeature(label: string, series: number, type: T
     await insertFeature(label, type, geomArray, series);
 }
 
-/*
-// EXAMPLE of how to parse feature data from postgres into open layers format
+/**
+    EXAMPLE of how to parse feature data from postgres into open layers format
+*  @param id The id of the series to fetch features from
 */
 export async function handleFetchSeriesFeatures(id: any) {
     const features = await fetchSeriesFeatures(id);

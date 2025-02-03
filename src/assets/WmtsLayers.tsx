@@ -1,4 +1,3 @@
-// MapComponent.js
 import TileLayer from "ol/layer/Tile"
 import "ol/ol.css"
 import { TileWMS, WMTS } from "ol/source"

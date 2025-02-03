@@ -12,8 +12,6 @@ import { Coordinate } from "ol/coordinate"
 import { transform } from "ol/proj"
 import DrawController from "./DrawController"
 import { Series } from "../../assets/TypeDeclarations/Types"
-import { fetchElevation } from "../../persistence/GeoserverQuery"
-
 
 export default function MapWMTS() {
 
@@ -26,10 +24,10 @@ export default function MapWMTS() {
 
     const [zoomLevel, setZoomLevel] = useState(6);
 
-    const layers:{ name: string, z: number, value: any }[] = [AdlImageLayer, countriesLayer, RouteLayer, populatedPlacesLayer, AusPolyLayer, AusLineLayer, AusRoadLayer, AusPointLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer];
+    const layers: { name: string, z: number, value: any }[] = [AdlImageLayer, countriesLayer, RouteLayer, populatedPlacesLayer, AusPolyLayer, AusLineLayer, AusRoadLayer, AusPointLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer];
     const [toggledLayers, setToggledLayers] = useState<{ name: string, z: number, value: any }[]>([AdlImageLayer, AusLineLayer, AusRoadLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
 
-    const [selectedRoads, setSelectedRoads] = useState<{ id: number | null; name: string | null; adminLevel: string | null; boundary: string | null; source: number | null; target: number | null; z:string | null }[] | undefined>(undefined);
+    const [selectedRoads, setSelectedRoads] = useState<{ id: number | null; name: string | null; adminLevel: string | null; boundary: string | null; source: number | null; target: number | null; z: string | null }[] | undefined>(undefined);
     const [selectedAmenities, setSelectedAmenities] = useState<{ id: string | null, name: string | null, covered: boolean | null }[] | undefined>(undefined);
     const [selectedRoute, setSelectedRoute] = useState({ source: 75299, target: 78946 })
     const [selectedCoordinate, setSelectedCoordinate] = useState<[number | null, number | null]>([null, null]);
@@ -46,7 +44,6 @@ export default function MapWMTS() {
         if (!intialLoadComplete) {
             getData();
             setInitialLoadComplete(true);
-            console.log("Getting data");
         }
         const map = new Map({
             target: mapElement.current || undefined,
@@ -84,17 +81,23 @@ export default function MapWMTS() {
         return () => map.setTarget(undefined)
     }, [toggledLayers, selectedRoute, drawType, selectedSeriesId]);
 
-    // Fetch data on page load
+    /**
+     * Fetch data on page load
+     */
     async function getData() {
 
         try {
             setSeries(await fetchSeries());
-        } catch (error:any) {
+        } catch (error: any) {
             console.warn(error.message, "Fetching series");
         }
     }
 
-    /* Change whether a layer is visible */
+    /**
+     * Change the visibility of a layer
+     * @param name the name of the layer to change the visibity of
+     * @param visible 
+     */
     function setLayerVisible(name: string, visible: boolean) {
 
         let localLayers = [...toggledLayers];
@@ -116,11 +119,12 @@ export default function MapWMTS() {
     }
 
 
-    // Perform actions when user clicks the map
+    /**
+     * Update state after user clicks the map
+     * @param e The event
+     */
     async function onMapClick(e: MapBrowserEvent<any>) {
         setSelectedCoordinate([e.coordinate[0], e.coordinate[1]]);
-        // let elevData = await fetchElevation([e.coordinate[0], e.coordinate[1]], e.map.getView().getZoom() || 5)
-        // console.log(elevData?.features[0]?.properties)
 
         // Get details of the road which was clicked on
         const roads = await getRoads(e.coordinate, e.map.getView().getZoom() || 5);
@@ -129,7 +133,7 @@ export default function MapWMTS() {
         // Get route to point clicked on
         if (drawType == "None" && roads && roads[0]?.target) {
             setSelectedRoute({ source: selectedRoute.source, target: roads[0].target });
-            drawRoute(e, selectedRoute.source, roads[0].target);
+            drawRoute(selectedRoute.source, roads[0].target);
         }
 
         // Get details of selected amenities
@@ -137,16 +141,22 @@ export default function MapWMTS() {
     }
 
 
-    // Perform actions when map move stops
+    /**
+     * Update state after the map moves
+     * @param e The map event
+     */
     function onMapMoveEnd(e: MapEvent) {
         const zoom = e.map.getView().getZoom();
         setZoomLevel(zoom || 5);
         setMapPosition(e.map.getView().getCenter() || [138.5998587389303, -34.925828922097786]);
     }
 
-    // Perform an action when a drawing is completed
+    /**
+     * Update state when a drawing is completed
+     * @param e The drawing event
+     */
     async function onDrawComplete(e: DrawEvent) {
-        const featureType =  e.feature.getGeometry()?.getType();
+        const featureType = e.feature.getGeometry()?.getType();
         setIsDrawing(false);
 
         if (!selectedSeriesId) {
@@ -154,7 +164,7 @@ export default function MapWMTS() {
             return;
         }
 
-        if(!featureType) {
+        if (!featureType) {
             console.warn("Feature not inserted. Issue finding type")
             return null;
         }
@@ -166,17 +176,23 @@ export default function MapWMTS() {
         }
     }
 
+    /**
+     * Actions to perform when a drawing event first occurs
+     * @param _e 
+     */
     function onDrawBegin(_e: DrawEvent) {
         setIsDrawing(true);
     }
 
-    // Add a route to the map
-    async function drawRoute(_e: MapBrowserEvent<any>, source: number, target: number) {
+    /**
+     * Add a route to the map
+     * @param source The vertice id to begin the route at
+     * @param target The vertice id to end the route at
+     */
+    async function drawRoute(source: number, target: number) {
         const layer = VectorRouteLayer.value;
         const route = await fetchRoute(source, target);
         const vertices: Coordinate[] = [];
-
-        console.log(route)
 
         // Clear any existing routes
         layer.getSource()?.clear();
@@ -191,8 +207,12 @@ export default function MapWMTS() {
         VectorRouteSource.addFeature(pathFeature);
     }
 
-    async function onSeriesChange(id:number) {
-        if(id==-1) {return;}
+    /**
+     * Update state when the selected series changes
+     * @param id The number of the new series
+     */
+    async function onSeriesChange(id: number) {
+        if (id == -1) { return null }
         const drawLayer = CustomPointsLayer.value;
 
         // Clear current features
@@ -200,7 +220,7 @@ export default function MapWMTS() {
 
         setSelectedSeriesId(id || undefined);
         if (!id) {
-            return;
+            return null
         }
 
         // Display new features on screen
@@ -220,7 +240,7 @@ export default function MapWMTS() {
                 })
 
             }
-        } catch (error:any) {
+        } catch (error: any) {
             console.warn(error.message, "Fetching features")
         }
     }
