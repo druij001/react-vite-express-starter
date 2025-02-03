@@ -7,12 +7,12 @@ import { AdlImageLayer, AusAmenityLayer, AusLineLayer, AusPointLayer, AusPolyLay
 import Draw, { DrawEvent } from 'ol/interaction/Draw.js';
 import { Geometry, LineString, Point, Polygon } from "ol/geom"
 import { Type } from "ol/geom/Geometry"
-import { fetchRoute, fetchSeries, insertSeries } from "../../persistence/PgQuery"
+import { fetchRoute, fetchSeries } from "../../persistence/PgQuery"
 import { Coordinate } from "ol/coordinate"
 import { transform } from "ol/proj"
 import DrawController from "./DrawController"
 import { Series } from "../../assets/TypeDeclarations/Types"
-import CreateSeriesDialogue from "./CreateSeriesDialogue"
+import { fetchElevation } from "../../persistence/GeoserverQuery"
 
 
 export default function MapWMTS() {
@@ -29,7 +29,7 @@ export default function MapWMTS() {
     const layers:{ name: string, z: number, value: any }[] = [AdlImageLayer, countriesLayer, RouteLayer, populatedPlacesLayer, AusPolyLayer, AusLineLayer, AusRoadLayer, AusPointLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer];
     const [toggledLayers, setToggledLayers] = useState<{ name: string, z: number, value: any }[]>([AdlImageLayer, AusLineLayer, AusRoadLayer, AusAmenityLayer, CustomPointsLayer, VectorRouteLayer]);
 
-    const [selectedRoads, setSelectedRoads] = useState<{ id: string | null; name: string | null; adminLevel: string | null; boundary: string | null; source: string | null; target: string | null; }[] | undefined>(undefined);
+    const [selectedRoads, setSelectedRoads] = useState<{ id: number | null; name: string | null; adminLevel: string | null; boundary: string | null; source: number | null; target: number | null; z:string | null }[] | undefined>(undefined);
     const [selectedAmenities, setSelectedAmenities] = useState<{ id: string | null, name: string | null, covered: boolean | null }[] | undefined>(undefined);
     const [selectedRoute, setSelectedRoute] = useState({ source: 75299, target: 78946 })
     const [selectedCoordinate, setSelectedCoordinate] = useState<[number | null, number | null]>([null, null]);
@@ -39,9 +39,6 @@ export default function MapWMTS() {
     const [drawType, setDrawType] = useState<"Polygon" | "LineString" | "Point" | "Circle" | "None">("None");
     const [series, setSeries] = useState<Series[] | undefined>(undefined);
     const [selectedSeriesId, setSelectedSeriesId] = useState<number | undefined>(undefined);
-
-    //Dialogues
-    const [createSeriesActive, setCreateSeriesActive] = useState<boolean>(false);
 
     mapRef.current = map;
 
@@ -122,6 +119,8 @@ export default function MapWMTS() {
     // Perform actions when user clicks the map
     async function onMapClick(e: MapBrowserEvent<any>) {
         setSelectedCoordinate([e.coordinate[0], e.coordinate[1]]);
+        // let elevData = await fetchElevation([e.coordinate[0], e.coordinate[1]], e.map.getView().getZoom() || 5)
+        // console.log(elevData?.features[0]?.properties)
 
         // Get details of the road which was clicked on
         const roads = await getRoads(e.coordinate, e.map.getView().getZoom() || 5);
@@ -129,8 +128,8 @@ export default function MapWMTS() {
 
         // Get route to point clicked on
         if (drawType == "None" && roads && roads[0]?.target) {
-            setSelectedRoute({ source: selectedRoute.source, target: parseInt(roads[0].target) });
-            drawRoute(e, selectedRoute.source, parseInt(roads[0].target));
+            setSelectedRoute({ source: selectedRoute.source, target: roads[0].target });
+            drawRoute(e, selectedRoute.source, roads[0].target);
         }
 
         // Get details of selected amenities
@@ -147,14 +146,20 @@ export default function MapWMTS() {
 
     // Perform an action when a drawing is completed
     async function onDrawComplete(e: DrawEvent) {
+        const featureType =  e.feature.getGeometry()?.getType();
         setIsDrawing(false);
 
         if (!selectedSeriesId) {
             console.warn("Feature not inserted. No series specified.")
             return;
         }
+
+        if(!featureType) {
+            console.warn("Feature not inserted. Issue finding type")
+            return null;
+        }
         try {
-            await handleInsertFeature("", selectedSeriesId, e.feature.getGeometry()?.getType(), e.feature as Feature<Geometry>);
+            await handleInsertFeature("", selectedSeriesId, featureType, e.feature as Feature<Geometry>);
             console.info("Feature inserted successfully into series", selectedSeriesId)
         } catch (error) {
             console.warn("Error inserting feature.")
@@ -170,6 +175,8 @@ export default function MapWMTS() {
         const layer = VectorRouteLayer.value;
         const route = await fetchRoute(source, target);
         const vertices: Coordinate[] = [];
+
+        console.log(route)
 
         // Clear any existing routes
         layer.getSource()?.clear();
@@ -263,7 +270,7 @@ export default function MapWMTS() {
                     <h3>Roads</h3>
                     {selectedRoads?.map((road, i) => (
                         <div key={i} style={{ width: "100%" }}>
-                            <p>{road.id}: {road.name} ({road.source} - {road.source} )</p>
+                            <p>{road.id} ({road.z}): {road.name} ({road.source} - {road.source} )</p>
                         </div>
                     ))}
                 </div>
@@ -276,9 +283,6 @@ export default function MapWMTS() {
                     ))}
                 </div>
             </div>
-            <CreateSeriesDialogue
-                active={false} 
-                setActive={setCreateSeriesActive} />
         </div>
     )
 }

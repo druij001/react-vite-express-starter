@@ -46,15 +46,15 @@ async function setupApp() {
 
         // Needs validation
         if (!options.description && !options.name) {
-            res.send(options);
+            res.send(new ServerResponse(403, false));
             return;
         }
 
         pgClient.query(
             "INSERT INTO SERIES (name, description) \
                 VALUES ($1, $2)", [options.name, options.description])
-            .then(() => res.send(options))
-            .catch(() => { return Error() })
+            .then(() => res.send(new ServerResponse(200, true)))
+            .catch(() => res.send(new ServerResponse(404, false)));
     });
 
     //Create a new point
@@ -69,16 +69,18 @@ async function setupApp() {
 
         // Needs validation
         if (!options.geom || !options.series_id || !options.type) {
-            res.send(new ServerResponse(403, undefined));
+            res.send(new ServerResponse(403, false));
             return;
         }
 
         pgClient.query(
             "INSERT INTO user_features (label, type, geom, series_id) \
             VALUES ($1, $2, $3, $4)", [options.label, options.type, options.geom, options.series_id])
-            .then((r) => res.send(new ServerResponse(200, r.rows)))
-            .catch(() => res.send(new ServerResponse(404, undefined)));
+            .then(() => res.send(new ServerResponse(200, true)))
+            .catch(() => res.send(new ServerResponse(404, false)));
     })
+
+
 
     // Fetch roads
     app.get("/api/roads", (req, res) => {
@@ -92,8 +94,8 @@ async function setupApp() {
         pgClient.query(
             "select * from planet_osm_roads \
             limit $1", [options.limit])
-            .then((r) => res.send(r.rows))
-            .catch(() => res.sendStatus(404))
+            .then(r => res.send(new ServerResponse(200, r.rows)))
+            .catch(() => res.send(new ServerResponse(404, undefined)));
     })
 
     // Fetch a route
@@ -107,12 +109,12 @@ async function setupApp() {
         // Needs validation
         pgClient.query(
             "SELECT * FROM get_route($1, $2)", [options.source as number, options.target as number])
-            .then((r) => res.send(r.rows))
-            .catch(() => res.sendStatus(404))
+            .then(r => res.send(new ServerResponse(200, r.rows)))
+            .catch(() => res.send(new ServerResponse(404, undefined)));
     })
 
     // Fetch all series
-    app.get("/api/series/fetch", (req, res) => {
+    app.get("/api/series/fetch", (_req, res) => {
 
         let query = "SELECT * FROM series ORDER BY id";
 

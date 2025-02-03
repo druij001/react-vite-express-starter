@@ -1,89 +1,91 @@
 import { Coordinate } from "ol/coordinate";
-import { fetchAmenities, fetchPaths, fetchRoads } from "../persistence/GeoserverQuery";
+import { fetchAmenities, fetchRoads } from "../persistence/GeoserverQuery";
 import { Geometry, LineString, Point, Polygon } from "ol/geom";
 import { Type } from "ol/geom/Geometry";
 import { Feature } from "ol";
 import { fetchSeriesFeatures, insertFeature } from "../persistence/PgQuery";
-import { HandledFeature } from "../assets/TypeDeclarations/Types";
+import { GeoserverFeatureCollection, GeoserverRoadFeature, HandledFeature } from "../assets/TypeDeclarations/Types";
 
 const DOM_PARSER = new DOMParser();
 
-export async function getPaths(coordinate: Coordinate, zoom: number) {
-    let returnObj = [{}];
-
-    // Fetch and parse data
-    let rawXml = await fetchPaths(coordinate, zoom);
-
-    if (!rawXml) return;
-
-    let lineElements = parseDocAndGetTag(await rawXml.text(), "qmaps:planet_osm_line") || [];
-
-    // return roads in json format
-    for (let i = 0; i < lineElements?.length; i++) {
-        let el = lineElements[i]
-        let highway = el.getElementsByTagName("qmaps:highway")[0]?.innerHTML;
-        if (highway == "residential" || highway == "trunk" || highway == "secondary" || highway == "motorway" || highway == "unclassified") {
-            returnObj.push({ id: el?.getElementsByTagName("qmaps:osm_id")[0]?.innerHTML || null, name: el?.getElementsByTagName("gml:name")[0]?.innerHTML || "unamed", highway: el?.getElementsByTagName("qmaps:highway")[0]?.innerHTML, surface: el?.getElementsByTagName("qmaps:surface")[0]?.innerHTML || "unclassified" })
-        }
+// Helper function to extract a section from an xml field
+function parseDocAndGetTag(xmlText: string, tag: string) {
+    try {
+        return DOM_PARSER.parseFromString(xmlText, "text/xml").getElementsByTagName(tag);
+    } catch (error) {
+        console.warn(error);
+        return null;
     }
-
-    return returnObj;
 }
 
+/**  
+    EXAMPLE of how to extract roads information out of an json object 
+ */
 export async function getRoads(coordinate: Coordinate, zoom: number) {
-    let returnObj: { id: string | null; name: string | null; adminLevel: string | null; boundary: string | null; source: string | null; target: string | null; }[] = [];
+    const returnObj: { id: number | null; name: string | null; adminLevel: string | null; boundary: string | null; source: number | null; target: number | null; z: string | null }[] = [];
 
     // Fetch and parse data
-    let rawXml = await fetchRoads(coordinate, zoom);
+    const rawData: GeoserverFeatureCollection = await fetchRoads(coordinate, zoom);
+    const roadElements: GeoserverRoadFeature[] = rawData?.features;
 
-    if (!rawXml) return;
-
-    let roadElements = parseDocAndGetTag(await rawXml.text(), "qmaps:aus_roads_with_vertices") || [];
-
+    if (!roadElements) return [];
+    console.log(roadElements)
 
     // return roads in json format
     for (let i = 0; i < roadElements?.length; i++) {
-        let el = roadElements[i]
+        let properties = roadElements[i].properties;
 
-        if (el.getElementsByTagName("qmaps:highway")[0]?.innerHTML != undefined) {
-            returnObj.push(
-                {
-                    id: el?.getElementsByTagName("qmaps:osm_id")[0]?.innerHTML || null,
-                    name: el?.getElementsByTagName("gml:name")[0]?.innerHTML || null,
-                    adminLevel: el?.getElementsByTagName("qmaps:admin_level")[0]?.innerHTML || null,
-                    boundary: el?.getElementsByTagName("qmaps:boundary")[0]?.innerHTML || null,
-                    source: el?.getElementsByTagName("qmaps:source")[0]?.innerHTML || null,
-                    target: el?.getElementsByTagName("qmaps:target")[0]?.innerHTML || null
-                })
-        }
+        // Select only properties that are a type of highway
+        if (properties.highway)
+        returnObj.push(
+            {
+                id: properties.osm_id || null,
+                name: properties.name || null,
+                adminLevel: properties.admin_level || null,
+                boundary: properties.boundary || null,
+                source: properties.source || null,
+                target: properties.target || null,
+                z: properties.z_order || null
+            })
     }
 
     return returnObj;
 }
 
+/*  
+//    EXAMPLE of how to extract points information out of an xml object 
+*/
 export async function getInterestPoints(coordinate: Coordinate, zoom: number) {
-    let returnObj: { id: string | null; name: string | null; covered: boolean | null; }[] = [];
+    const returnObj: { id: string | null; name: string | null; covered: boolean | null; }[] = [];
 
-    let rawXml = await fetchAmenities(coordinate, zoom);
+    // Call fetch function
+    const rawXml = await fetchAmenities(coordinate, zoom);
 
     if (!rawXml) return;
 
-    let interestElements = parseDocAndGetTag(await rawXml.text(), "qmaps:aus_amenities") || [];
+    // Extract the elements with "qmaps:aus_amenities tag"
+    const interestElements = parseDocAndGetTag(await rawXml.text(), "qmaps:aus_amenities") || [];
 
+    // return as json object
     for (let i = 0; i < interestElements.length; i++) {
         let el = interestElements[i];
 
-
-        returnObj.push({ id: el?.getElementsByTagName("qmaps:osm_id")[0].innerHTML || null, name: el?.getElementsByTagName("qmaps:amenity")[0].innerHTML || "Undefined", covered: el?.getElementsByTagName("qmaps:covered")[0]?.innerHTML ? true : false })
+        returnObj.push({
+            id: el?.getElementsByTagName("qmaps:osm_id")[0].innerHTML || null,
+            name: el?.getElementsByTagName("qmaps:amenity")[0].innerHTML || "Undefined",
+            covered: el?.getElementsByTagName("qmaps:covered")[0]?.innerHTML ? true : false
+        })
     }
 
     return returnObj;
 }
 
-export async function handleInsertFeature(label: string, series: number, type: Type | undefined, feature: Feature<Geometry>) {
-    if (!type) {
-        return false;
-    }
+/* 
+// EXAMPLE of how to prepare an open layers point, polygon or linestring for insertion into the postgres DB
+*/
+export async function handleInsertFeature(label: string, series: number, type: Type, feature: Feature<Geometry>) {
+
+    if (!type) return false;
 
     // Convert feature into geometry format
     const geom = feature.getGeometry() as Point | Polygon | LineString;
@@ -94,6 +96,7 @@ export async function handleInsertFeature(label: string, series: number, type: T
         (geom as LineString).getCoordinates().forEach((coord) => {
             geomArray.push(coord[0], coord[1]);
         });
+
     } else if (type == "Polygon") {
         (geom as Polygon).getCoordinates().forEach((nestedCoords) => {
             nestedCoords.forEach(coord => (geomArray.push(coord[0], coord[1])))
@@ -104,34 +107,37 @@ export async function handleInsertFeature(label: string, series: number, type: T
     await insertFeature(label, type, geomArray, series);
 }
 
-export async function handleFetchSeriesFeatures(id:any) {
+/*
+// EXAMPLE of how to parse feature data from postgres into open layers format
+*/
+export async function handleFetchSeriesFeatures(id: any) {
     const features = await fetchSeriesFeatures(id);
     const handledFeatures = new Array<HandledFeature>();
 
-    if(!features || features.length<0) {
+    if (!features || features.length < 0) {
         return [];
     }
 
-    // Convert from string format to numbered
+    // Convert geometry element array from string representation into array of coordinates
     features.forEach(feat => {
         const localArray = new Array<Coordinate>();
-        let splitString = feat.geom.split(',')
+        let splitString = feat.geom.split(',');
 
+        // Get coordinate pairs from flat array
         for (let i = 0; i < splitString.length; i = i + 2) {
-            localArray.push([parseFloat(splitString[i]), parseFloat(splitString[i + 1])])
+            localArray.push([
+                parseFloat(splitString[i]),
+                parseFloat(splitString[i + 1])])
         }
-        handledFeatures.push({id: feat.id, label:feat.label, type: feat.type, geom: localArray , series_id: feat.series_id});
+
+        handledFeatures.push({
+            id: feat.id,
+            label: feat.label,
+            type: feat.type,
+            geom: localArray,
+            series_id: feat.series_id
+        });
     })
 
     return handledFeatures;
-}
-
-// Helper function
-function parseDocAndGetTag(xmlText: string, tag: string) {
-    try {
-        return DOM_PARSER.parseFromString(xmlText, "text/xml").getElementsByTagName(tag);
-    } catch (error) {
-        console.log(error);
-        return null;
-    }
 }
