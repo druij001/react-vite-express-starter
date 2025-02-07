@@ -1,0 +1,39 @@
+<GeoServerTileLayer>
+  <id>LayerInfoImpl-6495e554:194d8449583:14bd</id>
+  <enabled>true</enabled>
+  <inMemoryCached>true</inMemoryCached>
+  <name>qmaps:ESRIWI_AUS</name>
+  <mimeFormats>
+    <string>image/png</string>
+  </mimeFormats>
+  <gridSubsets>
+    <gridSubset>
+      <gridSetName>EPSG:4326</gridSetName>
+      <extent>
+        <coords>
+          <double>-180.0</double>
+          <double>-85.0511</double>
+          <double>180.0</double>
+          <double>85.05109999999999</double>
+        </coords>
+      </extent>
+      <zoomStop>7</zoomStop>
+    </gridSubset>
+  </gridSubsets>
+  <metaWidthHeight>
+    <int>4</int>
+    <int>4</int>
+  </metaWidthHeight>
+  <expireCache>0</expireCache>
+  <expireClients>0</expireClients>
+  <parameterFilters>
+    <styleParameterFilter>
+      <key>STYLES</key>
+      <defaultValue></defaultValue>
+      <availableStyles class="sorted-set"/>
+      <defaultStyle>raster</defaultStyle>
+    </styleParameterFilter>
+  </parameterFilters>
+  <gutter>0</gutter>
+  <cacheWarningSkips/>
+</GeoServerTileLayer>

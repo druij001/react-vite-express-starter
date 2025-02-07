@@ -1,0 +1,17 @@
+<layer>
+  <name>planet_osm_line</name>
+  <id>LayerInfoImpl-6495e554:194d83a5a41:-59f7</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--570ae188:124761b8d78:-7fe3</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-6495e554:194d83a5a41:-59f8</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2025-02-05 22:31:09.872 UTC</dateCreated>
+  <dateModified>2025-02-06 22:27:30.759 UTC</dateModified>
+</layer>

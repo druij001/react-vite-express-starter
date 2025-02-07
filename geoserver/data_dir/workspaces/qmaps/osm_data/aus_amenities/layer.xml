@@ -1,0 +1,17 @@
+<layer>
+  <name>aus_amenities</name>
+  <id>LayerInfoImpl-6495e554:194d83a5a41:-59f9</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--570ae188:124761b8d78:-7fdf</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-6495e554:194d83a5a41:-59fa</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2025-02-05 22:30:44.226 UTC</dateCreated>
+  <dateModified>2025-02-06 05:36:55.624 UTC</dateModified>
+</layer>

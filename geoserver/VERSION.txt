@@ -1,0 +1,9 @@
+version = 2.27-SNAPSHOT
+git revision = 159e5bf6afbfb9776f08cbe03d8ed09cb2d55507
+git branch = origin/main
+build date = 14-Jan-2025 19:07
+geotools version = 33-SNAPSHOT
+geotools revision = 8960ffbe83404ceb20dc3033d2cbf3ca394040a4
+geowebcache version = 1.27-SNAPSHOT
+geowebcache revision = origin/main/76c34e026edf35023538328f9925a40c1df9
+hudson build = -1

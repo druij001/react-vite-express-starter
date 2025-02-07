@@ -1,0 +1,17 @@
+<layer>
+  <name>ESRIWI_AUS</name>
+  <id>LayerInfoImpl-6495e554:194d8449583:14bd</id>
+  <type>WMTS</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--570ae188:124761b8d78:-7fe2</id>
+  </defaultStyle>
+  <resource class="wmtsLayer">
+    <id>WMTSLayerInfoImpl-6495e554:194d8449583:14bc</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2025-02-05 22:44:20.924 UTC</dateCreated>
+  <dateModified>2025-02-06 22:15:55.823 UTC</dateModified>
+</layer>

@@ -1,0 +1,19 @@
+<wmtsStore>
+  <id>WMTSStoreInfoImpl-6495e554:194d83edd00:5f5b</id>
+  <name>topology</name>
+  <type>WMTS</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--1ea68bf0:194d837123f:-8000</id>
+  </workspace>
+  <metadata>
+    <entry key="useConnectionPooling">true</entry>
+  </metadata>
+  <__default>false</__default>
+  <dateCreated>2025-02-05 22:37:00.838 UTC</dateCreated>
+  <disableOnConnFailure>false</disableOnConnFailure>
+  <capabilitiesURL>https://gis.sinica.edu.tw/worldmap</capabilitiesURL>
+  <maxConnections>6</maxConnections>
+  <readTimeout>60</readTimeout>
+  <connectTimeout>30</connectTimeout>
+</wmtsStore>

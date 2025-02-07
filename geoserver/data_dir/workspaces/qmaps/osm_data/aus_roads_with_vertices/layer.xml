@@ -1,0 +1,17 @@
+<layer>
+  <name>aus_roads_with_vertices</name>
+  <id>LayerInfoImpl--1ea68bf0:194d837123f:-7ff9</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--570ae188:124761b8d78:-7fe3</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--1ea68bf0:194d837123f:-7ffa</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2025-02-05 22:25:43.174 UTC</dateCreated>
+  <dateModified>2025-02-06 05:37:26.715 UTC</dateModified>
+</layer>
